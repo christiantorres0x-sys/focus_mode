@@ -3,6 +3,13 @@
 
 import { DEFAULT_SETTINGS, SETTING_LIMITS, isThemeMode, type UserSettings } from "../types/settings";
 import type { TimerState } from "../types/timer";
+import {
+  DEFAULT_BLOCKING_STATUS,
+  SUGGESTED_SITES,
+  type BlockedWebsite,
+  type BlockingStatus,
+} from "../types/blocker";
+import { normalizeDomain } from "../utils/domain";
 import { sanitizeTimerState } from "./timerLogic";
 
 export const SCHEMA_VERSION = 1;
@@ -11,6 +18,8 @@ const KEYS = {
   schemaVersion: "schemaVersion",
   settings: "settings",
   timerState: "timerState",
+  blocklist: "blocklist",
+  blockingStatus: "blockingStatus",
 } as const;
 
 type LimitedKey = keyof typeof SETTING_LIMITS;
@@ -64,12 +73,18 @@ export async function updateSettings(patch: Partial<UserSettings>): Promise<User
 
 // Called by the background worker on install/update. Never overwrites valid data.
 export async function initStorage(): Promise<void> {
-  const data = await chrome.storage.local.get([KEYS.schemaVersion, KEYS.settings]);
+  const data = await chrome.storage.local.get([KEYS.schemaVersion, KEYS.settings, KEYS.blocklist]);
   const settings = sanitizeSettings(data[KEYS.settings]);
-  await chrome.storage.local.set({
+  const toSave: Record<string, unknown> = {
     [KEYS.schemaVersion]: SCHEMA_VERSION,
     [KEYS.settings]: settings,
-  });
+  };
+  // First run only: start with the suggested list (FR-10). If the user later
+  // empties the list, the key still exists, so we never re-add sites for them.
+  if (data[KEYS.blocklist] === undefined) {
+    toSave[KEYS.blocklist] = createSuggestedBlocklist();
+  }
+  await chrome.storage.local.set(toSave);
 }
 
 // Lets UI pages react when settings change (for example in another tab).
@@ -106,6 +121,98 @@ export function onTimerStateChanged(callback: (state: TimerState) => void): () =
   ) => {
     if (area === "local" && KEYS.timerState in changes) {
       callback(sanitizeTimerState(changes[KEYS.timerState].newValue));
+    }
+  };
+  chrome.storage.onChanged.addListener(listener);
+  return () => chrome.storage.onChanged.removeListener(listener);
+}
+
+// ---- Blocklist (SRS 6.3) ----
+
+export function createSuggestedBlocklist(): BlockedWebsite[] {
+  return SUGGESTED_SITES.map(({ domain, category }) => ({
+    id: crypto.randomUUID(),
+    domain,
+    category,
+    enabled: true,
+  }));
+}
+
+// Keeps only valid entries, normalizes their domains, and drops duplicates.
+export function sanitizeBlocklist(raw: unknown): BlockedWebsite[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const result: BlockedWebsite[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const r = item as Record<string, unknown>;
+    if (typeof r.domain !== "string") continue;
+    const parsed = normalizeDomain(r.domain);
+    if (!parsed.ok || seen.has(parsed.domain)) continue;
+    seen.add(parsed.domain);
+    result.push({
+      id: typeof r.id === "string" && r.id !== "" ? r.id : `site-${parsed.domain}`,
+      domain: parsed.domain,
+      category: typeof r.category === "string" && r.category !== "" ? r.category : null,
+      enabled: typeof r.enabled === "boolean" ? r.enabled : true,
+    });
+  }
+  return result;
+}
+
+export async function getBlocklist(): Promise<BlockedWebsite[]> {
+  const data = await chrome.storage.local.get(KEYS.blocklist);
+  return sanitizeBlocklist(data[KEYS.blocklist]);
+}
+
+// Throws if the browser could not save (SRS 9.3).
+export async function saveBlocklist(sites: BlockedWebsite[]): Promise<void> {
+  await chrome.storage.local.set({ [KEYS.blocklist]: sites });
+}
+
+export function onBlocklistChanged(callback: (sites: BlockedWebsite[]) => void): () => void {
+  const listener = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: chrome.storage.AreaName,
+  ) => {
+    if (area === "local" && KEYS.blocklist in changes) {
+      callback(sanitizeBlocklist(changes[KEYS.blocklist].newValue));
+    }
+  };
+  chrome.storage.onChanged.addListener(listener);
+  return () => chrome.storage.onChanged.removeListener(listener);
+}
+
+// ---- Blocking status (written by the background worker only) ----
+
+export function sanitizeBlockingStatus(raw: unknown): BlockingStatus {
+  if (typeof raw !== "object" || raw === null) return { ...DEFAULT_BLOCKING_STATUS };
+  const r = raw as Record<string, unknown>;
+  const d = DEFAULT_BLOCKING_STATUS;
+  return {
+    active: bool(r.active, d.active),
+    ruleCount: typeof r.ruleCount === "number" && Number.isInteger(r.ruleCount) && r.ruleCount >= 0 ? r.ruleCount : 0,
+    hostAccess: bool(r.hostAccess, d.hostAccess),
+    error: typeof r.error === "string" && r.error !== "" ? r.error : null,
+  };
+}
+
+export async function getBlockingStatus(): Promise<BlockingStatus> {
+  const data = await chrome.storage.local.get(KEYS.blockingStatus);
+  return sanitizeBlockingStatus(data[KEYS.blockingStatus]);
+}
+
+export async function saveBlockingStatus(status: BlockingStatus): Promise<void> {
+  await chrome.storage.local.set({ [KEYS.blockingStatus]: status });
+}
+
+export function onBlockingStatusChanged(callback: (status: BlockingStatus) => void): () => void {
+  const listener = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: chrome.storage.AreaName,
+  ) => {
+    if (area === "local" && KEYS.blockingStatus in changes) {
+      callback(sanitizeBlockingStatus(changes[KEYS.blockingStatus].newValue));
     }
   };
   chrome.storage.onChanged.addListener(listener);

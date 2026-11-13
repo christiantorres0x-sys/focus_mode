@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import Switch from "./Switch";
 
 interface ToggleProps {
   label: string;
@@ -8,15 +9,16 @@ interface ToggleProps {
   onChange: (checked: boolean) => Promise<void>;
 }
 
+// A labelled setting row with a switch.
 export default function Toggle({ label, description, checked, onChange }: ToggleProps) {
   const labelId = useId();
   const descriptionId = useId();
   const [error, setError] = useState<string | null>(null);
 
-  const toggle = async () => {
+  const change = async (next: boolean) => {
     try {
       setError(null);
-      await onChange(!checked);
+      await onChange(next);
     } catch (e) {
       console.error("[Focus Mode] could not save setting", e);
       setError("Could not save this change. Please try again.");
@@ -36,24 +38,12 @@ export default function Toggle({ label, description, checked, onChange }: Toggle
             </p>
           )}
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
+        <Switch
+          checked={checked}
+          onChange={change}
           aria-labelledby={labelId}
           aria-describedby={description ? descriptionId : undefined}
-          onClick={toggle}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
-            checked ? "bg-brand" : "bg-line"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-              checked ? "translate-x-5" : "translate-x-0"
-            }`}
-          />
-        </button>
+        />
       </div>
       {error && (
         <p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">

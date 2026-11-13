@@ -1,23 +1,15 @@
 // Background timer controller. This is the ONLY place that writes the timer
-// state. It reads the state, applies a pure rule from timerLogic, saves it, and
-// keeps one chrome.alarms alarm pointing at the moment the phase ends.
+// state. It reads the state, applies a pure rule from timerLogic, updates website
+// blocking to match, saves it, and keeps one chrome.alarms alarm pointing at the
+// moment the phase ends.
 
 import { getSettings, getTimerState, saveTimerState } from "../services/storage";
 import { applyCommand, reconcileTimer } from "../services/timerLogic";
 import type { TimerAction, TimerState } from "../types/timer";
+import { syncBlocking } from "./blockingManager";
+import { enqueue } from "./queue";
 
 export const PHASE_END_ALARM = "focusmode:phase-end";
-
-// The service worker can receive several messages at once (for example an alarm
-// and a popup click). Each update reads, changes and writes the state, so two at
-// the same time could overwrite each other. This queue runs them one by one.
-let queue: Promise<unknown> = Promise.resolve();
-
-function enqueue<T>(task: () => Promise<T>): Promise<T> {
-  const run = queue.then(task);
-  queue = run.catch(() => undefined); // a failed task must not block later ones
-  return run;
-}
 
 // Alarms can be cleared when the browser restarts, so we re-create the alarm
 // from the saved state every time the worker runs.
@@ -38,6 +30,12 @@ async function update(action: TimerAction): Promise<TimerState> {
   const caughtUp = reconcileTimer(saved, settings, now);
   const next = applyCommand(caughtUp, action, settings, now);
 
+  // Website blocking follows the timer (BR-01). It runs on EVERY update, even when
+  // nothing changed, which is how blocking is restored after a browser restart
+  // (FR-18). Blocking is updated BEFORE the new state is saved so the popup never
+  // shows "running" before the rules are really on. syncBlocking never throws.
+  await syncBlocking(next);
+
   if (JSON.stringify(next) !== JSON.stringify(saved)) {
     await saveTimerState(next);
   }
@@ -50,8 +48,8 @@ export function handleTimerCommand(action: TimerAction): Promise<TimerState> {
   return enqueue(() => update(action));
 }
 
-// Catch up and re-arm the alarm. Used on worker start-up, browser start-up,
-// alarm events and when a page opens.
+// Catch up and re-arm the alarm and blocking. Used on worker start-up, browser
+// start-up, alarm events and when a page opens.
 export function syncTimer(): Promise<TimerState> {
   return enqueue(() => update("reconcile"));
 }

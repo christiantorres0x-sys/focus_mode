@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export const ROUTES = ["overview", "tasks", "insights", "settings"] as const;
+export const ROUTES = ["overview", "blocklist", "tasks", "insights", "settings"] as const;
 export type Route = (typeof ROUTES)[number];
 
 function parseRoute(): Route {

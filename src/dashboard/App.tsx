@@ -1,12 +1,14 @@
-import { BarChart3, LayoutDashboard, ListChecks, Settings, Timer, type LucideIcon } from "lucide-react";
+import { BarChart3, LayoutDashboard, ListChecks, Settings, ShieldBan, Timer, type LucideIcon } from "lucide-react";
 import { ROUTES, useHashRoute, type Route } from "../hooks/useHashRoute";
 import OverviewPage from "./pages/OverviewPage";
+import BlocklistPage from "./pages/BlocklistPage";
 import TasksPage from "./pages/TasksPage";
 import InsightsPage from "./pages/InsightsPage";
 import SettingsPage from "./pages/SettingsPage";
 
 const NAV: Record<Route, { label: string; icon: LucideIcon }> = {
   overview: { label: "Overview", icon: LayoutDashboard },
+  blocklist: { label: "Blocklist", icon: ShieldBan },
   tasks: { label: "Tasks", icon: ListChecks },
   insights: { label: "Insights", icon: BarChart3 },
   settings: { label: "Settings", icon: Settings },
@@ -14,6 +16,7 @@ const NAV: Record<Route, { label: string; icon: LucideIcon }> = {
 
 const PAGES: Record<Route, () => React.JSX.Element> = {
   overview: OverviewPage,
+  blocklist: BlocklistPage,
   tasks: TasksPage,
   insights: InsightsPage,
   settings: SettingsPage,

@@ -1,5 +1,6 @@
 import { Armchair, Brain, Coffee, Pause, Play, RotateCcw, SkipForward, type LucideIcon } from "lucide-react";
 import Button from "./ui/Button";
+import BlockingNotice from "./BlockingNotice";
 import { useTimer } from "../hooks/useTimer";
 import { useSettings } from "../hooks/useSettings";
 import { formatClock } from "../utils/time";
@@ -112,6 +113,8 @@ export default function TimerPanel() {
           {error}
         </p>
       )}
+
+      <BlockingNotice focusRunning={state.status === "running" && state.phase === "focus"} />
     </div>
   );
 }
