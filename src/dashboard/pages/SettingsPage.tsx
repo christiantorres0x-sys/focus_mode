@@ -1,11 +1,14 @@
 import { Info, Palette } from "lucide-react";
 import Card from "../../components/ui/Card";
 import ThemeSwitcher from "../../components/ThemeSwitcher";
+import TimerSettingsCard from "../../components/TimerSettingsCard";
 
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
+
+      <TimerSettingsCard />
 
       <Card
         title="Appearance"

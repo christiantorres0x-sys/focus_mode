@@ -1,19 +1,26 @@
 // Centralized storage service (SRS 5.5). UI and background code should read and
 // write chrome.storage.local ONLY through this file.
 
-import { DEFAULT_SETTINGS, isThemeMode, type UserSettings } from "../types/settings";
+import { DEFAULT_SETTINGS, SETTING_LIMITS, isThemeMode, type UserSettings } from "../types/settings";
+import type { TimerState } from "../types/timer";
+import { sanitizeTimerState } from "./timerLogic";
 
 export const SCHEMA_VERSION = 1;
 
 const KEYS = {
   schemaVersion: "schemaVersion",
   settings: "settings",
+  timerState: "timerState",
 } as const;
 
-function intInRange(value: unknown, fallback: number, min: number, max: number): number {
+type LimitedKey = keyof typeof SETTING_LIMITS;
+
+// Accepts a whole number inside the allowed range, otherwise uses the fallback.
+function limited(value: unknown, key: LimitedKey): number {
+  const { min, max } = SETTING_LIMITS[key];
   return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max
     ? value
-    : fallback;
+    : DEFAULT_SETTINGS[key];
 }
 
 function bool(value: unknown, fallback: boolean): boolean {
@@ -27,15 +34,19 @@ export function sanitizeSettings(raw: unknown): UserSettings {
   const d = DEFAULT_SETTINGS;
   return {
     theme: isThemeMode(r.theme) ? r.theme : d.theme,
-    focusDuration: intInRange(r.focusDuration, d.focusDuration, 1, 180),
-    shortBreakDuration: intInRange(r.shortBreakDuration, d.shortBreakDuration, 1, 60),
-    longBreakDuration: intInRange(r.longBreakDuration, d.longBreakDuration, 1, 120),
-    longBreakInterval: intInRange(r.longBreakInterval, d.longBreakInterval, 2, 12),
-    dailyGoalMinutes: intInRange(r.dailyGoalMinutes, d.dailyGoalMinutes, 5, 1440),
+    focusDuration: limited(r.focusDuration, "focusDuration"),
+    shortBreakDuration: limited(r.shortBreakDuration, "shortBreakDuration"),
+    longBreakDuration: limited(r.longBreakDuration, "longBreakDuration"),
+    longBreakInterval: limited(r.longBreakInterval, "longBreakInterval"),
+    autoStartBreaks: bool(r.autoStartBreaks, d.autoStartBreaks),
+    autoStartFocus: bool(r.autoStartFocus, d.autoStartFocus),
+    dailyGoalMinutes: limited(r.dailyGoalMinutes, "dailyGoalMinutes"),
     notificationsEnabled: bool(r.notificationsEnabled, d.notificationsEnabled),
     soundEnabled: bool(r.soundEnabled, d.soundEnabled),
   };
 }
+
+// ---- Settings ----
 
 export async function getSettings(): Promise<UserSettings> {
   const data = await chrome.storage.local.get(KEYS.settings);
@@ -69,6 +80,32 @@ export function onSettingsChanged(callback: (settings: UserSettings) => void): (
   ) => {
     if (area === "local" && KEYS.settings in changes) {
       callback(sanitizeSettings(changes[KEYS.settings].newValue));
+    }
+  };
+  chrome.storage.onChanged.addListener(listener);
+  return () => chrome.storage.onChanged.removeListener(listener);
+}
+
+// ---- Timer state ----
+// Only the background worker should WRITE the timer state; the UI reads it and
+// sends commands instead (see background/timerController.ts).
+
+export async function getTimerState(): Promise<TimerState> {
+  const data = await chrome.storage.local.get(KEYS.timerState);
+  return sanitizeTimerState(data[KEYS.timerState]);
+}
+
+export async function saveTimerState(state: TimerState): Promise<void> {
+  await chrome.storage.local.set({ [KEYS.timerState]: state });
+}
+
+export function onTimerStateChanged(callback: (state: TimerState) => void): () => void {
+  const listener = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: chrome.storage.AreaName,
+  ) => {
+    if (area === "local" && KEYS.timerState in changes) {
+      callback(sanitizeTimerState(changes[KEYS.timerState].newValue));
     }
   };
   chrome.storage.onChanged.addListener(listener);
