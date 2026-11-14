@@ -10,7 +10,7 @@ export default function App() {
   };
 
   return (
-    <main className="p-5">
+    <main className="p-4">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-on-brand">
@@ -28,11 +28,11 @@ export default function App() {
         />
       </header>
 
-      <section aria-label="Timer" className="mt-5 rounded-2xl border border-line bg-surface p-5 shadow-sm">
-        <TimerPanel />
+      <section aria-label="Timer" className="mt-3 rounded-2xl border border-line bg-surface p-4 shadow-sm">
+        <TimerPanel compact />
       </section>
 
-      <footer className="mt-5 flex items-center justify-between">
+      <footer className="mt-3 flex items-center justify-between">
         <span className="text-sm text-muted">Theme</span>
         <ThemeSwitcher compact />
       </footer>

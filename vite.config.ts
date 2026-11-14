@@ -17,6 +17,7 @@ export default defineConfig({
         popup: resolve(import.meta.dirname, "popup.html"),
         dashboard: resolve(import.meta.dirname, "dashboard.html"),
         blocked: resolve(import.meta.dirname, "blocked.html"),
+        offscreen: resolve(import.meta.dirname, "offscreen.html"),
         background: resolve(import.meta.dirname, "src/background/index.ts"),
       },
       output: {

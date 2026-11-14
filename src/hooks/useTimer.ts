@@ -3,6 +3,7 @@ import { useSettings } from "./useSettings";
 import { getTimerState, onTimerStateChanged } from "../services/storage";
 import { sendTimerCommand } from "../services/timerClient";
 import { getRemainingMs, getTotalMs } from "../services/timerLogic";
+import type { FocusContext } from "../types/session";
 import { DEFAULT_TIMER_STATE, type TimerAction, type TimerState } from "../types/timer";
 
 export interface UseTimerResult {
@@ -11,7 +12,7 @@ export interface UseTimerResult {
   remainingMs: number;
   totalMs: number;
   error: string | null;
-  run: (action: TimerAction) => Promise<void>;
+  run: (action: TimerAction, context?: FocusContext) => Promise<void>;
 }
 
 // Gives a React page the live timer. The page never owns the timer: it reads the
@@ -70,10 +71,10 @@ export function useTimer(): UseTimerResult {
     sendTimerCommand("reconcile").catch((e) => console.error("[Focus Mode] could not finish phase", e));
   }, [state.status, state.endsAt, remainingMs]);
 
-  const run = useCallback(async (action: TimerAction) => {
+  const run = useCallback(async (action: TimerAction, context?: FocusContext) => {
     try {
       setError(null);
-      setState(await sendTimerCommand(action));
+      setState(await sendTimerCommand(action, context));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     }

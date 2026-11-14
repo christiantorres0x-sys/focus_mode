@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Focus Mode",
-  "version": "0.4.0",
+  "version": "0.7.0",
   "description": "A student productivity extension: Pomodoro timer, website blocking, study tasks and insights.",
-  "minimum_chrome_version": "110",
+  "minimum_chrome_version": "116",
   "action": {
     "default_title": "Focus Mode",
     "default_popup": "popup.html",
@@ -25,7 +25,7 @@
     "type": "module"
   },
   "options_page": "dashboard.html",
-  "permissions": ["storage", "alarms", "declarativeNetRequest"],
+  "permissions": ["storage", "alarms", "declarativeNetRequest", "notifications", "offscreen"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "web_accessible_resources": [
     {

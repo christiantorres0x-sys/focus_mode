@@ -47,7 +47,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse: (r
   // Only accept messages from this extension's own pages.
   if (sender.id !== chrome.runtime.id || !isTimerMessage(message)) return false;
 
-  handleTimerCommand(message.action)
+  handleTimerCommand(message.action, message.context)
     .then((state) => sendResponse({ ok: true, state }))
     .catch((error) => {
       logError(`timer command "${message.action}" failed`, error);

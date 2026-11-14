@@ -1,10 +1,14 @@
 import { Armchair, Brain, Coffee, Pause, Play, RotateCcw, SkipForward, type LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import Button from "./ui/Button";
+import FocusDetails from "./FocusDetails";
+import DailyGoalMeter from "./DailyGoalMeter";
 import BlockingNotice from "./BlockingNotice";
 import { useTimer } from "../hooks/useTimer";
 import { useSettings } from "../hooks/useSettings";
 import { formatClock } from "../utils/time";
 import type { TimerPhase, TimerState } from "../types/timer";
+import { EMPTY_FOCUS_CONTEXT, type FocusContext } from "../types/session";
 
 const PHASES: Record<TimerPhase, { label: string; icon: LucideIcon }> = {
   focus: { label: "Focus", icon: Brain },
@@ -21,9 +25,19 @@ function statusText(state: TimerState): string {
 const RADIUS = 78;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export default function TimerPanel() {
+export default function TimerPanel({ detailsDefaultOpen = false, compact = false }: { detailsDefaultOpen?: boolean; compact?: boolean }) {
   const { settings } = useSettings();
   const { ready, state, remainingMs, totalMs, error, run } = useTimer();
+  const [context, setContext] = useState<FocusContext>(EMPTY_FOCUS_CONTEXT);
+  const [seeded, setSeeded] = useState(false);
+
+  // Start from what the timer remembers (the last session's details), once.
+  useEffect(() => {
+    if (ready && !seeded) {
+      setContext(state.intent);
+      setSeeded(true);
+    }
+  }, [ready, seeded, state.intent]);
 
   // Avoid flashing wrong numbers before the saved state has loaded.
   if (!ready) return <div className="h-80" aria-busy="true" />;
@@ -33,6 +47,7 @@ export default function TimerPanel() {
   const clock = formatClock(seconds);
   const progress = state.status === "idle" || totalMs <= 0 ? 0 : Math.min(1, Math.max(0, 1 - remainingMs / totalMs));
   const cycleLength = settings.longBreakInterval;
+  const focusActive = state.phase === "focus" && state.status !== "idle";
   const sessionNumber = (state.completedFocusCount % cycleLength) + 1;
 
   return (
@@ -42,7 +57,7 @@ export default function TimerPanel() {
         {label}
       </p>
 
-      <div className="relative mx-auto mt-4 h-44 w-44">
+      <div className={`relative mx-auto ${compact ? "mt-3 h-28 w-28" : "mt-4 h-40 w-40"}`}>
         <svg viewBox="0 0 180 180" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="90" cy="90" r={RADIUS} fill="none" strokeWidth="8" className="stroke-line" />
           <circle
@@ -61,7 +76,7 @@ export default function TimerPanel() {
           <p
             role="timer"
             aria-label={`${Math.floor(seconds / 60)} minutes ${seconds % 60} seconds remaining`}
-            className="text-4xl font-semibold tabular-nums"
+            className={`${compact ? "text-2xl" : "text-4xl"} font-semibold tabular-nums`}
           >
             {clock}
           </p>
@@ -70,12 +85,12 @@ export default function TimerPanel() {
       </div>
 
       {state.phase === "focus" && (
-        <p className="mt-3 text-xs text-muted">
+        <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-muted`}>
           Session {sessionNumber} of {cycleLength}
         </p>
       )}
 
-      <div className="mt-4 flex items-center justify-center gap-2">
+      <div className="mt-3 flex items-center justify-center gap-2">
         {state.status === "running" ? (
           <Button icon={Pause} onClick={() => run("pause")}>
             Pause
@@ -85,15 +100,15 @@ export default function TimerPanel() {
             Resume
           </Button>
         ) : (
-          <Button icon={Play} onClick={() => run("start")}>
+          <Button icon={Play} onClick={() => run("start", state.phase === "focus" ? context : undefined)}>
             Start
           </Button>
         )}
         <Button
           variant="secondary"
           icon={RotateCcw}
-          aria-label="Reset timer"
-          title="Reset timer"
+          aria-label={focusActive ? "Stop session early" : "Reset timer"}
+          title={focusActive ? "Stop session early (recorded as interrupted)" : "Reset timer"}
           disabled={state.status === "idle"}
           onClick={() => run("reset")}
           className="!px-2.5"
@@ -102,17 +117,32 @@ export default function TimerPanel() {
           variant="secondary"
           icon={SkipForward}
           aria-label={state.phase === "focus" ? "Skip to break" : "Skip to focus"}
-          title={state.phase === "focus" ? "Skip to break" : "Skip to focus"}
+          title={state.phase === "focus" ? "Skip to break (a started session is recorded as interrupted)" : "Skip to focus"}
           onClick={() => run("skip")}
           className="!px-2.5"
         />
       </div>
+
+      {state.phase === "focus" &&
+        (focusActive ? (
+          (state.intent.title || state.intent.subject) && (
+            <p className="mt-3 truncate text-xs text-muted">
+              {[state.intent.title, state.intent.subject].filter(Boolean).join(" · ")}
+            </p>
+          )
+        ) : (
+          <FocusDetails value={context} onChange={setContext} defaultOpen={detailsDefaultOpen} compact={compact} />
+        ))}
 
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
       )}
+
+      <div className="mt-3 border-t border-line pt-2.5 text-left">
+        <DailyGoalMeter compact />
+      </div>
 
       <BlockingNotice focusRunning={state.status === "running" && state.phase === "focus"} />
     </div>
