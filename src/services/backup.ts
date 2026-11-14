@@ -49,7 +49,7 @@ export function csvCell(value: string | number | boolean | null): string {
 
 function toCsv(header: string[], rows: (string | number | boolean | null)[][]): string {
   // The byte order mark helps Excel read accented letters correctly.
-  return "﻿" + [header, ...rows].map((row) => row.map((cell) => csvCell(cell)).join(",")).join("\r\n") + "\r\n";
+  return "\uFEFF" + [header, ...rows].map((row) => row.map((cell) => csvCell(cell)).join(",")).join("\r\n") + "\r\n";
 }
 
 const minutes = (ms: number) => Math.round((ms / 60_000) * 100) / 100;
@@ -124,7 +124,7 @@ export function parseBackup(text: string): ImportResult {
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text.replace(/^﻿/, ""));
+    parsed = JSON.parse(text.replace(/^\uFEFF/, ""));
   } catch {
     return fail("This file is not valid JSON. Choose a backup exported from Focus Mode.");
   }

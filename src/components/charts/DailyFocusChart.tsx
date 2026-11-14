@@ -52,7 +52,7 @@ export default function DailyFocusChart({ series, goalMinutes }: DailyFocusChart
     <div>
       <div className="h-64 w-full" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+          <BarChart data={data} accessibilityLayer={false} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="label"

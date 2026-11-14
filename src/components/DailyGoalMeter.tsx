@@ -1,3 +1,4 @@
+import { useNow } from "../hooks/useNow";
 import { useSessions } from "../hooks/useSessions";
 import { useSettings } from "../hooks/useSettings";
 import { dayKey, goalPercent, sessionsOnDay, summarizeSessions } from "../utils/stats";
@@ -8,9 +9,10 @@ import { formatDuration } from "../utils/time";
 export default function DailyGoalMeter({ compact = false }: { compact?: boolean }) {
   const { ready, sessions } = useSessions();
   const { settings } = useSettings();
+  const now = useNow();
   if (!ready) return <div className={compact ? "h-9" : "h-14"} aria-busy="true" />;
 
-  const focusMs = summarizeSessions(sessionsOnDay(sessions, dayKey(Date.now()))).focusMs;
+  const focusMs = summarizeSessions(sessionsOnDay(sessions, dayKey(now))).focusMs;
   const percent = goalPercent(focusMs, settings.dailyGoalMinutes);
   const reached = percent >= 100;
 

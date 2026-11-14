@@ -4,13 +4,15 @@ import EmptyState from "../../components/ui/EmptyState";
 import TimerPanel from "../../components/TimerPanel";
 import DailyGoalMeter from "../../components/DailyGoalMeter";
 import SessionRow from "../../components/SessionRow";
+import { useNow } from "../../hooks/useNow";
 import { useSessions } from "../../hooks/useSessions";
 import { dayKey, sessionsOnDay, summarizeSessions } from "../../utils/stats";
 import { formatDuration } from "../../utils/time";
 
 export default function OverviewPage() {
   const { ready, sessions } = useSessions();
-  const today = sessionsOnDay(sessions, dayKey(Date.now()));
+  const now = useNow();
+  const today = sessionsOnDay(sessions, dayKey(now));
   const summary = summarizeSessions(today);
   const newestFirst = [...today].reverse();
 

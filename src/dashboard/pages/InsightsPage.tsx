@@ -7,6 +7,7 @@ import SegmentedControl from "../../components/ui/SegmentedControl";
 import DailyFocusChart from "../../components/charts/DailyFocusChart";
 import SessionRow from "../../components/SessionRow";
 import SubjectBreakdown from "../../components/SubjectBreakdown";
+import { useNow } from "../../hooks/useNow";
 import { useSessions } from "../../hooks/useSessions";
 import { useSettings } from "../../hooks/useSettings";
 import {
@@ -43,7 +44,7 @@ export default function InsightsPage() {
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [shown, setShown] = useState(PAGE);
 
-  const now = Date.now();
+  const now = useNow();
   const count = Number(range);
   const days = lastDays(count, now);
   const inRange = sessionsInDays(sessions, days);

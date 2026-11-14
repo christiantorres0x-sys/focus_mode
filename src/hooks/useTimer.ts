@@ -53,9 +53,12 @@ export function useTimer(): UseTimerResult {
   // display: the real time left always comes from the end timestamp.
   useEffect(() => {
     if (state.status !== "running") return;
-    setNow(Date.now());
+    const first = window.setTimeout(() => setNow(Date.now()), 0);
     const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
   }, [state.status, state.endsAt]);
 
   const remainingMs = getRemainingMs(state, settings, now);

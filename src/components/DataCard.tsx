@@ -91,7 +91,8 @@ export default function DataCard() {
             id="import-file"
             type="file"
             accept="application/json,.json"
-            className="sr-only"
+            aria-label="Backup file to import (JSON)"
+            className="hidden"
             onChange={(event) => onFile(event.target.files?.[0])}
           />
           <Button variant="secondary" icon={FileUp} className="mt-3" disabled={busy} onClick={() => fileInput.current?.click()}>

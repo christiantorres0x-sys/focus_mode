@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface NumberFieldProps {
   id: string;
@@ -19,10 +19,12 @@ export default function NumberField({ id, label, description, value, min, max, u
   const [error, setError] = useState<string | null>(null);
 
   // Follow the saved value (for example after a reset or a change elsewhere).
-  useEffect(() => {
+  const [shownValue, setShownValue] = useState(value);
+  if (shownValue !== value) {
+    setShownValue(value);
     setText(String(value));
     setError(null);
-  }, [value]);
+  }
 
   const commit = async () => {
     const trimmed = text.trim();

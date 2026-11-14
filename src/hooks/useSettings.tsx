@@ -13,7 +13,8 @@ import { getSettings, onSettingsChanged, updateSettings as saveSettings } from "
 
 interface SettingsContextValue {
   settings: UserSettings;
-  // Resolves after the change is saved; rejects if saving failed.
+  // Resolves after the change is saved; rejects if saving failed, and the old value
+  // stays on screen so an unsaved change is never shown as saved (SRS 9.3).
   updateSettings: (patch: Partial<UserSettings>) => Promise<void>;
 }
 

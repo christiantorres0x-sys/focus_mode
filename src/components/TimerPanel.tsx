@@ -1,5 +1,5 @@
 import { Armchair, Brain, Coffee, Pause, Play, RotateCcw, SkipForward, type LucideIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Button from "./ui/Button";
 import FocusDetails from "./FocusDetails";
 import DailyGoalMeter from "./DailyGoalMeter";
@@ -32,12 +32,10 @@ export default function TimerPanel({ detailsDefaultOpen = false, compact = false
   const [seeded, setSeeded] = useState(false);
 
   // Start from what the timer remembers (the last session's details), once.
-  useEffect(() => {
-    if (ready && !seeded) {
-      setContext(state.intent);
-      setSeeded(true);
-    }
-  }, [ready, seeded, state.intent]);
+  if (ready && !seeded) {
+    setSeeded(true);
+    setContext(state.intent);
+  }
 
   // Avoid flashing wrong numbers before the saved state has loaded.
   if (!ready) return <div className="h-80" aria-busy="true" />;

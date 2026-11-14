@@ -10,7 +10,7 @@ export async function sendTimerCommand(action: TimerAction, context?: FocusConte
     response = (await chrome.runtime.sendMessage({ type: "timer", action, context })) as TimerResponse | undefined;
   } catch (error) {
     console.error("[Focus Mode] could not reach the background worker", error);
-    throw new Error("Could not reach the Focus Mode background service. Try reloading the extension.");
+    throw new Error("Could not reach the Focus Mode background service. Try reloading the extension.", { cause: error });
   }
   if (!response) throw new Error("The background service did not respond.");
   if (!response.ok) throw new Error(response.error);
